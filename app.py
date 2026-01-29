@@ -131,7 +131,7 @@ with col1:
     )
 
 with col2:
-    check_button = st.button("🔎 Check", key="check_btn", use_container_width=True)
+    check_button = st.button("🔎 Check", key="check_btn", width='stretch')
 
 # Process input
 if check_button:
@@ -223,7 +223,7 @@ if check_button:
                                 ]
                             })
                             
-                            st.dataframe(df, use_container_width=True)
+                            st.dataframe(df, width='stretch')
                         
                     except Exception as e:
                         st.error(f"❌ Prediction error: {e}")

@@ -439,7 +439,7 @@ def render_url_detector():
     with col2:
         analyze_button = st.button(
             "🔎 Analyze",
-            use_container_width=False,
+            width='content',
             type="primary",
             key="analyze_btn"
         )
@@ -508,7 +508,7 @@ def render_url_detector():
                 # Color code the dataframe
                 st.dataframe(
                     feature_df,
-                    use_container_width=False,
+                    width='content',
                     hide_index=True,
                     height=400
                 )

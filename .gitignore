@@ -57,8 +57,8 @@ env/
 Thumbs.db
 
 # Models and data
-*.pickle
-*.pkl
+# *.pickle  # REMOVED: Allow models/ directory to be deployed
+# *.pkl     # REMOVED: Allow models/ directory to be deployed
 *.dat
 *.h5
 *.joblib

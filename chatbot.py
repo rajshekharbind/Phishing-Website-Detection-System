@@ -36,7 +36,12 @@ class PhishingChatbot:
         Args:
             api_key: Hugging Face API key (can also be set via environment variable HF_API_KEY)
         """
-        self.api_key = api_key or st.secrets.get("HF_API_KEY", "")
+        # Try to get API key from multiple sources, gracefully handle missing secrets
+        try:
+            self.api_key = api_key or st.secrets.get("HF_API_KEY", "")
+        except Exception:
+            # If secrets file doesn't exist or has issues, use empty string
+            self.api_key = api_key or ""
         self.api_url = "https://api-inference.huggingface.co/models/gpt2"
         self.conversation_history: List[Dict] = []
         self.context_added = False
@@ -302,7 +307,7 @@ def render_chatbot_interface():
                 help="Get your free API key from https://huggingface.co/settings/tokens"
             )
         with col2:
-            if st.button("✓ Set Key", use_container_width=True):
+            if st.button("✓ Set Key", width='stretch'):
                 if api_key:
                     chatbot.set_api_key(api_key)
                     st.session_state.api_key_set = True
@@ -339,7 +344,7 @@ def render_chatbot_interface():
         cols = st.columns(2)
         for i, question in enumerate(suggested):
             with cols[i % 2]:
-                if st.button(question, use_container_width=True, key=f"suggest_{i}"):
+                if st.button(question, width='stretch', key=f"suggest_{i}"):
                     st.session_state.user_input = question
                     st.rerun()
     
@@ -379,14 +384,14 @@ def render_chatbot_interface():
     
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🔄 Clear Chat", use_container_width=True):
+        if st.button("🔄 Clear Chat", width='stretch'):
             st.session_state.chat_messages = []
             chatbot.clear_history()
             st.success("Chat cleared!")
             st.rerun()
     
     with col2:
-        if st.button("📥 Export Chat", use_container_width=True):
+        if st.button("📥 Export Chat", width='stretch'):
             # Create exportable text
             export_text = "=== Phishing Detection Chatbot Conversation ===\n"
             export_text += f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
