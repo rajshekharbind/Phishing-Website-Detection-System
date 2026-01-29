@@ -1,10 +1,10 @@
 {
-  "accuracy": 0.864,
-  "precision": 0.862,
-  "recall": 0.874,
-  "f1_score": 0.868,
-  "model_type": "Random Forest (Demo Model)",
+  "accuracy": 0.5333333333333333,
+  "precision": 0.5,
+  "recall": 0.6428571428571429,
+  "f1_score": 0.5625,
+  "saved_at": "2026-01-29T17:10:05.301106",
+  "model_type": "Random Forest (Demo)",
   "samples_trained": 100,
-  "features": 17,
-  "note": "This is a demo model. Replace with actual trained model."
+  "features": 17
 }

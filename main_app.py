@@ -9,37 +9,42 @@ Version: 2.0
 Updated: January 2026
 """
 
+import warnings
+import sys
+import logging
+
+# Suppress numpy deprecation warnings early
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', message='.*numpy._core.*')
+
+# Fix numpy 2.x compatibility with old pickles BEFORE importing numpy
+class NumpyCompatibilityFix:
+    """Handle numpy version compatibility when loading pickled models"""
+    @staticmethod
+    def fix_numpy_imports():
+        """Add numpy._core alias if it doesn't exist (for numpy <2.0 compatibility)"""
+        try:
+            import numpy
+            # Check if we're using numpy 1.x (which has numpy._core as an alias)
+            if hasattr(numpy, '__version__'):
+                version = tuple(map(int, numpy.__version__.split('.')[:2]))
+                if version[0] < 2:
+                    # numpy 1.x - create _core if missing
+                    if not hasattr(numpy, '_core'):
+                        import numpy.core as core
+                        numpy._core = core
+        except Exception as e:
+            pass
+
+# Apply compatibility fix BEFORE other imports
+NumpyCompatibilityFix.fix_numpy_imports()
+
 import streamlit as st
 import pickle
 import os
 import pandas as pd
 import numpy as np
 from typing import Optional, Tuple, List
-import logging
-import warnings
-import sys
-
-# Suppress numpy deprecation warnings
-warnings.filterwarnings('ignore', category=DeprecationWarning)
-warnings.filterwarnings('ignore', message='.*numpy._core.*')
-
-# Fix numpy 2.x compatibility with old pickles
-class NumpyCompatibilityFix:
-    """Handle numpy version compatibility when loading pickled models"""
-    @staticmethod
-    def fix_numpy_imports():
-        """Add numpy._core alias if it doesn't exist (for numpy 2.x compatibility)"""
-        try:
-            import numpy
-            if not hasattr(numpy, '_core'):
-                # For numpy 2.x, create _core alias pointing to the actual internal module
-                import numpy.core as core
-                numpy._core = core
-        except Exception:
-            pass
-
-# Apply numpy compatibility fix before loading models
-NumpyCompatibilityFix.fix_numpy_imports()
 
 # Import feature extraction functions
 from URLFeatureExtraction import (
@@ -173,6 +178,10 @@ FEATURE_DESCRIPTIONS = {
     "Additional Security Feature": "Extra security indicators"
 }
 
+# Set working directory to the script's directory for proper relative paths
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(SCRIPT_DIR)
+
 MODEL_PATH = 'models/best_model.pickle'
 METRICS_PATH = 'models/best_model_metrics.json'
 
@@ -193,14 +202,45 @@ def load_model() -> Optional[object]:
             logger.warning(f"Model file not found: {MODEL_PATH}")
             return None
         
+        # Custom unpickler to handle numpy 1.x vs 2.x compatibility
+        class CompatibilityUnpickler(pickle.Unpickler):
+            def find_class(self, module, name):
+                # Map numpy._core (from numpy 2.x) to numpy.core (numpy 1.x)
+                if module == 'numpy._core' or module.startswith('numpy._core.'):
+                    # Replace numpy._core with numpy.core
+                    new_module = module.replace('numpy._core', 'numpy.core')
+                    logger.debug(f"Remapping module: {module} -> {new_module}")
+                    try:
+                        return super().find_class(new_module, name)
+                    except (ModuleNotFoundError, AttributeError):
+                        # If remapped version fails, try original
+                        pass
+                
+                # Handle numpy.random._core compatibility
+                if module.startswith('numpy.random._core'):
+                    new_module = module.replace('numpy.random._core', 'numpy.random')
+                    logger.debug(f"Remapping random module: {module} -> {new_module}")
+                    try:
+                        return super().find_class(new_module, name)
+                    except (ModuleNotFoundError, AttributeError):
+                        pass
+                
+                try:
+                    return super().find_class(module, name)
+                except ModuleNotFoundError as e:
+                    logger.error(f"Failed to find class {module}.{name}")
+                    raise
+        
         with open(MODEL_PATH, 'rb') as f:
-            model = pickle.load(f)
+            model = CompatibilityUnpickler(f).load()
         
         logger.info("Model loaded successfully")
         return model
     
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 @st.cache_resource
